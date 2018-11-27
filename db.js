@@ -23,18 +23,14 @@ var db = {
 
     delete : function (conn, cb) {
       conn.execute(
-        `BEGIN
-           EXECUTE IMMEDIATE 'DROP TABLE test';
-           EXCEPTION WHEN OTHERS THEN
-           IF SQLCODE <> -942 THEN
-             RAISE;
-           END IF;
-         END;`,
+        `UPDATE POLL_ITEMS SET DELETED = SYSDATE WHERE POLL_ID = (SELECT POLL_ID FROM POLLS WHERE POLL_NAME = :POLL_NAME)
+         UPDATE POLLS SET DELETED = SYSDATE WHERE POLL_NAME = :POLL_NAME`,
+        [OBJECT.POLL_NAME],
+        { autoCommit: true },
         function(err) {
           if (err) {
             return cb(err, conn);
           } else {
-            console.log("Table dropped");
             return cb(null, conn);
           }
         });
@@ -42,12 +38,12 @@ var db = {
 
     getAll : function (conn, cb) {
       conn.execute(
-        "CREATE TABLE test (id NUMBER, name VARCHAR2(20))",
+        `SELECT A.POLL_NAME,B.POLL_ITEM FROM POLLS A, POLL_ITEMS B
+          WHERE A.POLL_ID = B.POLL_ID AND A.DELETED IS NULL AND B.DELETED IS NULL`,
         function(err) {
           if (err) {
             return cb(err, conn);
           } else {
-            console.log("Table created");
             return cb(null, conn);
           }
         });
@@ -55,12 +51,13 @@ var db = {
 
     getSingle : function (conn, cb) {
       conn.execute(
-        "CREATE TABLE test (id NUMBER, name VARCHAR2(20))",
+        `SELECT A.POLL_NAME,B.POLL_ITEM FROM POLLS A, POLL_ITEMS B
+          WHERE A.POLL_NAME = :POLL_NAME AND A.POLL_ID = B.POLL_ID AND A.DELETED IS NULL AND B.DELETED IS NULL`,
+          [OBJECT.POLL_NAME],
         function(err) {
           if (err) {
             return cb(err, conn);
           } else {
-            console.log("Table created");
             return cb(null, conn);
           }
         });
@@ -68,8 +65,14 @@ var db = {
 
     insert : function (conn, cb) {
       conn.execute(
-        "INSERT INTO test VALUES (:id, :nm)",
-        { id : {val: 1 }, nm : {val: 'Chris'} },  // 'bind by name' syntax
+        `DECLARE
+          VAR NUMBER;
+         BEGIN
+          SELECT MAX(POLL_ID) INTO VAR FROM POLLS;
+          INSERT INTO POLLS VALUES (VAR, :nm, :deleted);
+          END;`,
+        { nm : {val: OBJECT.POLL_NAME},deleted : {val: SYSDATE} },
+        { autoCommit: true },
         function(err, result) {
           if (err) {
             return cb(err, conn);
@@ -82,14 +85,14 @@ var db = {
 
     update : function (conn, cb) {
       conn.execute(
-        "UPDATE test SET name = :nm",
-        ['Bambi'],
+        "UPDATE POLLS SET POLL_NAME = :NEW_NAME WHERE POLL_NAME = :POLL_NAME",
+        {NEW_NAME : {VAL : OBJECT.NEWNAME}, POLL_NAME : {VAL : OBJECT.POLL_NAME}},
         { autoCommit: true },  // commit once for all DML in the script
         function(err, result) {
           if (err) {
             return cb(err, conn);
           } else {
-            console.log("Rows updated: " + result.rowsAffected); // 2
+            console.log("Rows updated: " + result.rowsAffected);
             return cb(null, conn);
           }
         });
