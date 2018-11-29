@@ -4,10 +4,12 @@ var deletepoll = require('./deletepoll');
 var modifypoll = require('./modifypoll');
 var pollresult = require('./pollresult');
 var error = require('./error');
+var common = require('./common');
 
 module.exports = function(app){
   console.log('App is running.');
 
+  /* i have reviewed this route */
   app.get('/viewpoll',viewpoll.fetchAll,common.sendJSON,error);
 
   app.get('/viewpoll/:name',viewpoll.fetchSingle,common.sendJSON,error);

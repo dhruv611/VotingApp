@@ -1,11 +1,14 @@
 var common = {
 	sendJSON: function(req, res, next) {
-		if ((req.url & req.url.indexOf('jsonp') > -1) ||
-			(req.query && (req.query.callback || req.query.CALLBACK))) {
-			res.jsonp(req.res_data);
-		} else {
+		/* You shall rewrite this function according to what you need.
+		I think you can simply do this: */
+		if (req.res_data) {
 			res.json(req.res_data);
+		} else {
+			/* send empty object in response */
+			res.json({});
 		}
-	};
+	}
+};
 
-	module.exports = common;
+module.exports = common;
