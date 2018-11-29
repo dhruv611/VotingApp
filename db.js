@@ -36,17 +36,35 @@ var db = {
         });
     },
 
-    getAll : function (conn, cb) {
-      conn.execute(
-        `SELECT A.POLL_NAME,B.POLL_ITEM FROM POLLS A, POLL_ITEMS B
-          WHERE A.POLL_ID = B.POLL_ID AND A.DELETED IS NULL AND B.DELETED IS NULL`,
-        function(err) {
-          if (err) {
-            return cb(err, conn);
-          } else {
-            return cb(null, conn);
+    /* First parameter will contain the values that you passed while calling this function
+    db.getAll(options, function (err, response) {}); 
+    so basically whatever you passed as options will be accessible in first parameter */
+    getAll : function (ops, cb) {
+      
+      /* First initiate your db connection */
+      doconnect(function(connectionErr, connection) {
+        if (connectionErr) {
+          return cb(connectionErr);
+        }
+
+        /* If no connection error, then execute your query now */
+
+        /* Please cross check if this query will be a string or an object */
+        var query = `SELECT A.POLL_NAME,B.POLL_ITEM FROM POLLS A, POLL_ITEMS B
+          WHERE A.POLL_ID = B.POLL_ID AND A.DELETED IS NULL AND B.DELETED IS NULL`;
+
+        connection.execute(query, function(queryErr, queryRes) {
+          /* Once query is successfully done, you can safely release the connection
+          whether it returned an error or not, you must release the db connection */
+          dorelease(connection);
+
+          if (queryErr) {
+            return cb(queryErr);
           }
+
+          return (null, queryRes);
         });
+      });
     },
 
     getSingle : function (conn, cb) {
@@ -99,13 +117,7 @@ var db = {
     }
 };
 
-async.waterfall(
-  [
-    doconnect,
-    db
-  ],
-  function (err, conn) {
-    if (err) { console.error("In waterfall error cb: ==>", err, "<=="); }
-    if (conn)
-      dorelease(conn);
-  });
+/* Need to export this db object otherwise it will not be accessible from other files */
+module.exports = db;
+
+/* Removed async waterfall because you have to call specific functions (not complete object) inside a waterfall */
